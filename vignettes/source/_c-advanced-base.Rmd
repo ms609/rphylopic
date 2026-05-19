@@ -276,13 +276,14 @@ plot(vertebrate.tree)
 axis_geo_phylo(intervals = "periods")
 ```
 
-That's looking a lot prettier! Let's go ahead and replace the tip labels with our silhouettes now using `add_phylopic_base()`. Note that while it may look like all of the tips have an x-axis value of 0, that's actually a trick from `axis_geo_phylo()`. In reality, the left end of the x-axis is 0, and the right end of the x-axis is the total height of the tree. We can calculate this using the `nodeHeights()` function.
+That's looking a lot prettier! Let's go ahead and replace the tip labels with our silhouettes now using `add_phylopic_tree()` (a wrapper of `add_phylopic_base()` for phylogenetic trees). Note that while it may look like all of the tips have an x-axis value of 0, that's actually a trick from `axis_geo_phylo()`. In reality, the left end of the x-axis is 0, and the right end of the x-axis is the total height of the tree. Fortunately, `add_phylopic_tree()` figures out the x and y coordinates for the silhouettes for us, so we don't have to worry about doing any funny math.
 
 ```{r base-phylo-plot-3}
 plot(vertebrate.tree, show.tip.label = FALSE)
 axis_geo_phylo(intervals = "periods")
-add_phylopic_base(img = vertebrate_data$svg,
-                  x = max(nodeHeights(vertebrate.tree)), y = 1:11, height = 0.5)
+add_phylopic_tree(vertebrate.tree, tip = vertebrate_data$species,
+                  img = vertebrate_data$svg, height = 0.5, width = NULL,
+                  padding = 0, hjust = 0.5)
 ```
 
 Note that only a single size is specified and aspect ratio is always maintained, hence why the silhouettes all have the same height but different widths. Let's fix some of the silhouettes by rotating them 90 degrees:
@@ -297,11 +298,60 @@ And now the finished product:
 ```{r base-phylo-plot-4}
 plot(vertebrate.tree, show.tip.label = FALSE)
 axis_geo_phylo(intervals = "periods")
-add_phylopic_base(img = vertebrate_data$svg,
-                  x = max(nodeHeights(vertebrate.tree)), y = 1:11, height = 0.5)
+add_phylopic_tree(vertebrate.tree, tip = vertebrate_data$species,
+                  img = vertebrate_data$svg, height = 0.5, width = NULL,
+                  padding = 0, hjust = 0.5)
 ```
 
 Beautiful!
+
+# Network plots
+
+The **rphylopic** package also integrates directly with the `{igraph}` package for plotting networks in base R. When both packages are loaded, **rphylopic** registers a custom `{igraph}` vertex shape called `"phylopic"` that can be used in calls to `plot()` on an `{igraph}` graph via `vertex.shape = "phylopic"`. Each phylopic-related parameter from `add_phylopic_base()` is exposed as a corresponding `vertex.*` argument (e.g., `vertex.name`, `vertex.uuid`, `vertex.color`, `vertex.angle`).
+
+Let's demonstrate with a simple Permian food web. First, we set up the network:
+
+```{r message = FALSE, warning = FALSE}
+# Load libraries
+library(rphylopic)
+library(igraph)
+# Define the same Permian tetrapod food web
+food_web <- data.frame(
+  from = c("Eryops", "Diplocaulus", "Diplocaulus", "Eryops"),
+  to   = c("Dimetrodon", "Dimetrodon",
+           "Xenacanthus decheni", "Xenacanthus decheni")
+)
+g <- graph_from_data_frame(food_web, directed = TRUE)
+layout <- layout_with_fr(g)
+```
+
+We can now render the graph with PhyloPic silhouettes as the nodes. The vertex names from `V(g)$name` are passed to the `vertex.name` argument, which **rphylopic** uses to look up silhouettes:
+
+```{r base-network-plot-1, fig.height = 3.5, warning = FALSE}
+plot(g, layout = layout,
+     vertex.shape = "phylopic",
+     vertex.name = V(g)$name,         # taxonomic names from the graph
+     vertex.size = 100,
+     vertex.label = NA,               # silhouettes replace text labels
+     edge.arrow.size = 0.5,
+     xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5),
+     asp = 0)
+```
+
+Most of the customization options from `add_phylopic_base()` are also available via the `vertex.*` arguments. For example, here we color each silhouette differently and apply a small rotation:
+
+```{r base-network-plot-2, fig.height = 3.5, warning = FALSE}
+plot(g, layout = layout,
+     vertex.shape = "phylopic",
+     vertex.name = V(g)$name,
+     vertex.size = 100,
+     vertex.color = rainbow(vcount(g)),  # per-vertex fill color
+     vertex.angle = 15,                  # rotate all silhouettes 15 degrees
+     vertex.label = NA,
+     edge.arrow.size = 0.5,
+     xlim = c(-0.5, 0.5), ylim = c(-0.5, 0.5),
+     asp = 0)
+```
 
 </div>
 
